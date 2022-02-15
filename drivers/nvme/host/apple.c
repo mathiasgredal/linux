@@ -294,6 +294,7 @@ static void apple_nvmmu_inval(struct apple_nvme_queue *q, unsigned tag)
 static void apple_nvme_submit_cmd(struct apple_nvme_queue *q,
 				  struct nvme_command *cmd)
 {
+	struct apple_nvme *anv = queue_to_apple_nvme(q);
 	u32 tag = nvme_tag_from_cid(cmd->common.command_id);
 	struct apple_nvmmu_tcb *tcb = &q->tcbs[tag];
 
@@ -309,8 +310,10 @@ static void apple_nvme_submit_cmd(struct apple_nvme_queue *q,
 	if (cmd->common.opcode & NVME_OPCODE_DATA_XFER_CTRL_TO_HOST)
 		tcb->dma_flags |= APPLE_ANS_TCB_DMA_FROM_DEVICE;
 
+	spin_lock_irq(&anv->lock);
 	memcpy(&q->sqes[tag], cmd, sizeof(*cmd));
 	writel(tag, q->sq_db);
+	spin_unlock_irq(&anv->lock);
 }
 
 /*
